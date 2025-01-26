@@ -1,9 +1,7 @@
 package hu.cubix.timeoff.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +11,7 @@ import java.util.List;
 @NoArgsConstructor
 @Getter
 @Setter
+@EqualsAndHashCode(of = "id")
 public class Employee {
 
     @Id
@@ -33,18 +32,4 @@ public class Employee {
 
     @OneToMany(mappedBy = "approver", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
     private List<TimeoffRequest> approvals = new ArrayList<>();
-
-    public Employee(String name, Employee manager,
-                    List<Employee> subordinates,
-                    List<TimeoffRequest> requests) {
-        this.name = name;
-        this.manager = manager;
-        this.subordinates = subordinates;
-        this.requests = requests;
-    }
-
-    public Employee(String name, Employee manager) {
-        this.name = name;
-        this.manager = manager;
-    }
 }

@@ -2,6 +2,7 @@ package hu.cubix.timeoff.model;
 
 import hu.cubix.timeoff.enums.RequestStatus;
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Getter
 @Setter
+@EqualsAndHashCode(of = "id")
 public class TimeoffRequest {
 
     @Id
@@ -41,14 +43,9 @@ public class TimeoffRequest {
     @JoinColumn(name = "approver_id", referencedColumnName = "id", nullable = false)
     private Employee approver;
 
-    public TimeoffRequest(LocalDate startDate, LocalDate endDate,
-                          LocalDateTime requestDateTime, RequestStatus requestStatus,
-                          Employee requester, Employee approver) {
+    public TimeoffRequest(Long id, LocalDate startDate, LocalDate endDate) {
+        this.id = id;
         this.startDate = startDate;
         this.endDate = endDate;
-        this.requestDateTime = requestDateTime;
-        this.requestStatus = requestStatus;
-        this.requester = requester;
-        this.approver = approver;
     }
 }
