@@ -26,18 +26,37 @@ public class TimeoffRequestSpecification {
             cb.between((root.get(TimeoffRequest_.requestDateTime)).as(LocalDate.class), from, to);
     }
 
-    public static Specification<TimeoffRequest> intervalIntersectsWith(LocalDate from, LocalDate to) {
-        return startDateBetween(from, to).or(endDateBetween(from, to));
+    public static Specification<TimeoffRequest> intervalIntersection(LocalDate from, LocalDate to) {
+        return partialIntervalIntersection(from, to).or(completeIntervalIntersection(from, to));
     }
 
-    private static Specification<TimeoffRequest> startDateBetween(LocalDate from, LocalDate to) {
-        return (root, cq, cb) ->
+    private static Specification<TimeoffRequest> partialIntervalIntersection(LocalDate from, LocalDate to) {
+        Specification<TimeoffRequest> timeOffStartsBetweenFromAndToDates =
+            (root, cq, cb) ->
             cb.between((root.get(TimeoffRequest_.startDate)), from, to);
+        Specification<TimeoffRequest> timeOffEndsBetweenFromAndToDates =
+            (root, cq, cb) ->
+            cb.between((root.get(TimeoffRequest_.endDate)), from, to);
+
+        return timeOffStartsBetweenFromAndToDates.or(timeOffEndsBetweenFromAndToDates);
     }
 
-    private static Specification<TimeoffRequest> endDateBetween(LocalDate from, LocalDate to) {
-        return (root, cq, cb) ->
-            cb.between((root.get(TimeoffRequest_.endDate)), from, to);
+    private static Specification<TimeoffRequest> completeIntervalIntersection(LocalDate from, LocalDate to) {
+        Specification<TimeoffRequest> timeOffStartsBeforeFromDate =
+            (root, cq, cb) ->
+            cb.lessThanOrEqualTo((root.get(TimeoffRequest_.startDate)), from);
+        Specification<TimeoffRequest> timeOffEndsAfterToDate =
+            (root, cq, cb) ->
+            cb.greaterThanOrEqualTo((root.get(TimeoffRequest_.endDate)), to);
+        Specification<TimeoffRequest> timeOffStartsAfterFromDate =
+            (root, cq, cb) ->
+            cb.greaterThanOrEqualTo((root.get(TimeoffRequest_.startDate)), from);
+        Specification<TimeoffRequest> timeOffEndsBeforeToDate =
+            (root, cq, cb) ->
+            cb.lessThanOrEqualTo((root.get(TimeoffRequest_.endDate)), to);
+
+        return (timeOffStartsBeforeFromDate.and(timeOffEndsAfterToDate)).or
+            (timeOffStartsAfterFromDate.and(timeOffEndsBeforeToDate));
     }
 
     private static Specification<TimeoffRequest> requesterNameStartsWith(String namePrefix) {

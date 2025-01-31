@@ -58,7 +58,7 @@ public class TimeoffRequestController {
     public TimeoffRequestDto evaluateTimeoffRequest(@RequestBody TimeoffEvaluationDto timeoffEvaluationDto) {
         TimeoffRequest evaluatedTimeoffRequest = timeoffRequestService.evaluateTimeoffRequest(
             timeoffEvaluationDto.getId(),
-            timeoffEvaluationDto.getEvaluation()
+            timeoffEvaluationDto.getRequestStatus()
         );
         return timeoffRequestMapper.timeoffRequestToDto(evaluatedTimeoffRequest);
     }

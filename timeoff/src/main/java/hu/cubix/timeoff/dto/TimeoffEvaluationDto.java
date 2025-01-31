@@ -1,5 +1,6 @@
 package hu.cubix.timeoff.dto;
 
+import hu.cubix.timeoff.enums.RequestStatus;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,5 +11,5 @@ import lombok.NoArgsConstructor;
 public class TimeoffEvaluationDto {
 
     private Long id;
-    private String evaluation;
+    private RequestStatus requestStatus;
 }

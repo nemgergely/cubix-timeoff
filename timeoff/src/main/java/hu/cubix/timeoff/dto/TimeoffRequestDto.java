@@ -2,6 +2,7 @@ package hu.cubix.timeoff.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonView;
+import hu.cubix.timeoff.enums.RequestStatus;
 import hu.cubix.timeoff.jsonviews.Views;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,7 +32,7 @@ public class TimeoffRequestDto {
     private LocalDateTime requestDateTime;
 
     @JsonView(Views.RequestView.class)
-    private String requestStatus;
+    private RequestStatus requestStatus;
 
     @JsonView(Views.RequestView.class)
     private EmployeeDto requester;

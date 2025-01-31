@@ -14,6 +14,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
+import static hu.cubix.timeoff.enums.RequestStatus.REJECTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -85,8 +86,7 @@ class TimeoffRequestControllerIntTest {
         // ARRANGE
         List<TimeoffRequestDto> timeoffRequestsBefore = getAllTimeoffRequests();
         Long id = 4L;
-        String evaluation = "rejected";
-        TimeoffEvaluationDto timeoffEvaluationDto = new TimeoffEvaluationDto(id, evaluation);
+        TimeoffEvaluationDto timeoffEvaluationDto = new TimeoffEvaluationDto(id, REJECTED);
 
         // ACT
         evaluatePatchTimeoffRequest(timeoffEvaluationDto);
@@ -99,7 +99,7 @@ class TimeoffRequestControllerIntTest {
             .findFirst();
         assertTrue(evaluatedDto.isPresent());
         assertEquals(id, evaluatedDto.get().getId());
-        assertEquals("REJECTED", evaluatedDto.get().getRequestStatus());
+        assertEquals(REJECTED, evaluatedDto.get().getRequestStatus());
         assertEquals(timeoffRequestsBefore.size(), timeoffRequestsAfter.size());
     }
 

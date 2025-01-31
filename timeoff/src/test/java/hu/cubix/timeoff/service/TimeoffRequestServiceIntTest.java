@@ -1,6 +1,7 @@
 package hu.cubix.timeoff.service;
 
 import hu.cubix.timeoff.dto.TimeoffCriteriaDto;
+import hu.cubix.timeoff.enums.RequestStatus;
 import hu.cubix.timeoff.model.TimeoffRequest;
 import hu.cubix.timeoff.repository.TimeoffRequestRepository;
 import org.junit.jupiter.api.MethodOrderer;
@@ -217,39 +218,40 @@ class TimeoffRequestServiceIntTest {
     @ParameterizedTest
     @CsvSource(value = {
         "Time off request not found, 10, REJECTED",
-        "Invalid evaluation, 1, BULLSHIT",
+        "Invalid evaluation, 1, PENDING",
         "Time off request already evaluated, 2, REJECTED",
         "Valid, 1, APPROVED",
     })
     void testEvaluateTimeoffRequest(String caseName, Long id, String evaluation) {
         // ARRANGE
         RuntimeException thrown;
+        RequestStatus requestStatus = RequestStatus.valueOf(evaluation);
 
         // ACT - ASSERT
         switch (caseName) {
             case "Time off request not found":
                 thrown = assertThrows(
                     NoSuchElementException.class,
-                    () -> timeoffRequestService.evaluateTimeoffRequest(id, evaluation)
+                    () -> timeoffRequestService.evaluateTimeoffRequest(id, requestStatus)
                 );
                 assertTrue(thrown.getMessage().contains("Timeoff request not found"));
                 break;
             case "Invalid evaluation":
                 thrown = assertThrows(
                     UnsupportedOperationException.class,
-                    () -> timeoffRequestService.evaluateTimeoffRequest(id, evaluation)
+                    () -> timeoffRequestService.evaluateTimeoffRequest(id, requestStatus)
                 );
                 assertTrue(thrown.getMessage().contains("Invalid evaluation"));
                 break;
             case "Time off request already evaluated":
                 thrown = assertThrows(
                     UnsupportedOperationException.class,
-                    () -> timeoffRequestService.evaluateTimeoffRequest(id, evaluation)
+                    () -> timeoffRequestService.evaluateTimeoffRequest(id, requestStatus)
                 );
                 assertTrue(thrown.getMessage().contains("This request was already evaluated"));
                 break;
             case "Valid":
-                TimeoffRequest updatedTimeoffRequest = timeoffRequestService.evaluateTimeoffRequest(id, evaluation);
+                TimeoffRequest updatedTimeoffRequest = timeoffRequestService.evaluateTimeoffRequest(id, requestStatus);
                 assertEquals(APPROVED, updatedTimeoffRequest.getRequestStatus());
                 assertEquals(id, updatedTimeoffRequest.getId());
                 break;

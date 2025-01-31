@@ -24,7 +24,6 @@ import static hu.cubix.timeoff.enums.RequestStatus.*;
 import static hu.cubix.timeoff.specification.TimeoffRequestSpecification.*;
 
 @Service
-@Transactional
 @AllArgsConstructor
 public class TimeoffRequestService {
 
@@ -51,12 +50,13 @@ public class TimeoffRequestService {
             specs = specs.and(requestDateBetween(createdFrom, createdTo));
         }
         if (activeFrom != null && activeTo != null) {
-            specs = specs.and(intervalIntersectsWith(activeFrom, activeTo));
+            specs = specs.and(intervalIntersection(activeFrom, activeTo));
         }
 
         return timeoffRequestRepository.findAll(specs, pageable);
     }
 
+    @Transactional
     public TimeoffRequest createTimeoffRequest(Long requesterId, TimeoffRequest timeoffRequest) {
         Optional<Employee> optRequester = employeeRepository.findById(requesterId);
         if (optRequester.isEmpty()) {
@@ -79,24 +79,24 @@ public class TimeoffRequestService {
         return newTimeoffRequest;
     }
 
-    public TimeoffRequest evaluateTimeoffRequest(Long id, String evaluation) {
+    @Transactional
+    public TimeoffRequest evaluateTimeoffRequest(Long id, RequestStatus requestStatus) {
         Optional<TimeoffRequest> optTimeoffRequest = timeoffRequestRepository.findById(id);
         if (optTimeoffRequest.isEmpty()) {
             throw new NoSuchElementException("Timeoff request not found");
         }
-        if (evaluation == null ||
-            (!evaluation.toUpperCase().equals(String.valueOf(APPROVED))
-            && !evaluation.toUpperCase().equals(String.valueOf(REJECTED)))) {
+        if ((requestStatus != APPROVED && requestStatus != REJECTED)) {
             throw new UnsupportedOperationException("Invalid evaluation");
         }
         TimeoffRequest timeoffRequest = optTimeoffRequest.get();
         if (timeoffRequest.getRequestStatus() != PENDING) {
             throw new UnsupportedOperationException("This request was already evaluated");
         }
-        timeoffRequest.setRequestStatus(RequestStatus.valueOf(evaluation.toUpperCase()));
-        return timeoffRequestRepository.save(timeoffRequest);
+        timeoffRequest.setRequestStatus(requestStatus);
+        return timeoffRequest;
     }
 
+    @Transactional
     public TimeoffRequest updateTimeoffRequest(TimeoffRequest updatedTimeoffRequest) {
         Optional<TimeoffRequest> optTimeoffRequest = timeoffRequestRepository.findById(updatedTimeoffRequest.getId());
         if (optTimeoffRequest.isEmpty()) {
@@ -107,21 +107,13 @@ public class TimeoffRequestService {
             throw new UnsupportedOperationException("This request was already evaluated");
         }
         if (updatedTimeoffRequest.getRequestStatus() == null || updatedTimeoffRequest.getRequestStatus() != PENDING) {
-            updatedTimeoffRequest.setRequestStatus(PENDING);
+            timeoffRequest.setRequestStatus(PENDING);
         }
-        Employee requester = timeoffRequest.getRequester();
-        Employee approver = timeoffRequest.getApprover();
-        updatedTimeoffRequest.setRequestDateTime(LocalDateTime.now());
-        updatedTimeoffRequest.setRequester(requester);
-        updatedTimeoffRequest.setApprover(approver);
-        updatedTimeoffRequest = timeoffRequestRepository.save(updatedTimeoffRequest);
-        requester.getRequests().remove(timeoffRequest);
-        requester.getRequests().add(updatedTimeoffRequest);
-        approver.getApprovals().remove(timeoffRequest);
-        approver.getApprovals().add(updatedTimeoffRequest);
-        employeeRepository.saveAll(List.of(requester, approver));
+        timeoffRequest.setStartDate(updatedTimeoffRequest.getStartDate());
+        timeoffRequest.setEndDate(updatedTimeoffRequest.getEndDate());
+        timeoffRequest.setRequestDateTime(LocalDateTime.now());
 
-        return updatedTimeoffRequest;
+        return timeoffRequest;
     }
 
     public void deleteTimeoffRequest(Long id) {
