@@ -3,11 +3,15 @@ package hu.cubix.timeoff.controller;
 import hu.cubix.timeoff.dto.TimeoffCriteriaDto;
 import hu.cubix.timeoff.dto.TimeoffEvaluationDto;
 import hu.cubix.timeoff.dto.TimeoffRequestDto;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.test.web.reactive.server.WebTestClient;
+import org.springframework.test.web.servlet.client.MockMvcWebTestClient;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -24,17 +28,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TimeoffRequestControllerIntTest {
 
     @Autowired
+    WebApplicationContext webApplicationContext;
+
     WebTestClient webTestClient;
 
     public static final String API_TIMEOFF = "/api/timeoff";
 
+    @BeforeEach
+    void setUp() {
+        webTestClient = MockMvcWebTestClient.bindToApplicationContext(webApplicationContext).build();
+    }
+
+    @WithUserDetails(value = "employeeE1", userDetailsServiceBeanName = "employeeUserDetailsService")
     @Test
     void testCreateTimeoffRequest() {
         // ARRANGE
         LocalDate from = LocalDate.of(2022, 5, 1);
         LocalDate to = LocalDate.of(2022, 5, 4);
-        TimeoffRequestDto newTimeoffRequestDto = new TimeoffRequestDto(null, from, to);
-        List<TimeoffRequestDto> timeoffRequestsBefore = getAllTimeoffRequests();
+        TimeoffRequestDto newTimeoffRequestDto = new TimeoffRequestDto(null, from, to);List<TimeoffRequestDto> timeoffRequestsBefore = getAllTimeoffRequests();
 
         // ACT
         createPostTimeoffRequest(newTimeoffRequestDto);
@@ -50,10 +61,11 @@ class TimeoffRequestControllerIntTest {
             .usingRecursiveComparison()
             .ignoringFields("id", "requestDateTime", "requestStatus", "requester", "approver")
             .isEqualTo(newTimeoffRequestDto);
-        assertEquals("A Aladar", addedTimeoffRequestDto.getRequester().getName());
+        assertEquals("Employee 1", addedTimeoffRequestDto.getRequester().getName());
         assertEquals("Manager One", addedTimeoffRequestDto.getApprover().getName());
     }
 
+    @WithUserDetails(value = "employeeE1", userDetailsServiceBeanName = "employeeUserDetailsService")
     @Test
     void testUpdateTimeoffRequest() {
         // ARRANGE
@@ -81,11 +93,12 @@ class TimeoffRequestControllerIntTest {
         assertEquals(timeoffRequestsBefore.size(), timeoffRequestsAfter.size());
     }
 
+    @WithUserDetails(value = "managerM2", userDetailsServiceBeanName = "employeeUserDetailsService")
     @Test
     void testEvaluateTimeoffRequest() {
         // ARRANGE
         List<TimeoffRequestDto> timeoffRequestsBefore = getAllTimeoffRequests();
-        Long id = 4L;
+        Long id = 5L;
         TimeoffEvaluationDto timeoffEvaluationDto = new TimeoffEvaluationDto(id, REJECTED);
 
         // ACT
@@ -103,6 +116,7 @@ class TimeoffRequestControllerIntTest {
         assertEquals(timeoffRequestsBefore.size(), timeoffRequestsAfter.size());
     }
 
+    @WithUserDetails(value = "employeeE8", userDetailsServiceBeanName = "employeeUserDetailsService")
     @Test
     void testDeleteTimeoffRequest() {
         // ARRANGE
@@ -114,7 +128,7 @@ class TimeoffRequestControllerIntTest {
         // ASSERT
         List<TimeoffRequestDto> timeoffRequestsAfter = getAllTimeoffRequests();
         assertEquals(timeoffRequestsBefore.size() - 1, timeoffRequestsAfter.size());
-        assertTrue(timeoffRequestsAfter.stream().noneMatch(tor -> tor.getId().equals(5L)));
+        assertTrue(timeoffRequestsAfter.stream().noneMatch(tor -> tor.getId().equals(7L)));
     }
 
     private void createPostTimeoffRequest(TimeoffRequestDto newTimeoffRequestDto) {
@@ -134,7 +148,7 @@ class TimeoffRequestControllerIntTest {
             .delete()
             .uri(
                 API_TIMEOFF
-                .concat("?id=5"))
+                .concat("?id=7"))
             .exchange()
             .expectStatus()
             .isOk();

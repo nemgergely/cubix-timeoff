@@ -15,3 +15,10 @@ spring:
     init:
       mode: always
       data-locations: classpath:data.sql
+logging:
+  level:
+    org:
+      springframework:
+        security: DEBUG
+
+

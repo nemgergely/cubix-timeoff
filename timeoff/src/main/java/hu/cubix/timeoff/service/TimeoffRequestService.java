@@ -6,10 +6,13 @@ import hu.cubix.timeoff.model.Employee;
 import hu.cubix.timeoff.model.TimeoffRequest;
 import hu.cubix.timeoff.repository.EmployeeRepository;
 import hu.cubix.timeoff.repository.TimeoffRequestRepository;
+import hu.cubix.timeoff.security.CustomUserDetails;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -58,11 +61,8 @@ public class TimeoffRequestService {
 
     @Transactional
     public TimeoffRequest createTimeoffRequest(Long requesterId, TimeoffRequest timeoffRequest) {
-        Optional<Employee> optRequester = employeeRepository.findById(requesterId);
-        if (optRequester.isEmpty()) {
-            throw new NoSuchElementException("Requester employee not found");
-        }
-        Employee requester = optRequester.get();
+        Employee requester = checkEmployeeExisting(requesterId);
+        checkIfAuthorizedRequest(requesterId, false);
         Employee approver = requester.getManager();
         if (approver == null) {
             throw new NoSuchElementException("There is no manager found who can approve this request");
@@ -81,31 +81,21 @@ public class TimeoffRequestService {
 
     @Transactional
     public TimeoffRequest evaluateTimeoffRequest(Long id, RequestStatus requestStatus) {
-        Optional<TimeoffRequest> optTimeoffRequest = timeoffRequestRepository.findById(id);
-        if (optTimeoffRequest.isEmpty()) {
-            throw new NoSuchElementException("Timeoff request not found");
-        }
+        TimeoffRequest timeoffRequest = checkTimeoffRequestExisting(id);
         if ((requestStatus != APPROVED && requestStatus != REJECTED)) {
             throw new UnsupportedOperationException("Invalid evaluation");
         }
-        TimeoffRequest timeoffRequest = optTimeoffRequest.get();
-        if (timeoffRequest.getRequestStatus() != PENDING) {
-            throw new UnsupportedOperationException("This request was already evaluated");
-        }
+        checkIfAuthorizedRequest(timeoffRequest.getApprover().getId(), true);
+        checkTimeoffRequestStatus(timeoffRequest);
         timeoffRequest.setRequestStatus(requestStatus);
         return timeoffRequest;
     }
 
     @Transactional
     public TimeoffRequest updateTimeoffRequest(TimeoffRequest updatedTimeoffRequest) {
-        Optional<TimeoffRequest> optTimeoffRequest = timeoffRequestRepository.findById(updatedTimeoffRequest.getId());
-        if (optTimeoffRequest.isEmpty()) {
-            throw new NoSuchElementException("Timeoff request not found");
-        }
-        TimeoffRequest timeoffRequest = optTimeoffRequest.get();
-        if (timeoffRequest.getRequestStatus() != PENDING) {
-            throw new UnsupportedOperationException("This request was already evaluated");
-        }
+        TimeoffRequest timeoffRequest = checkTimeoffRequestExisting(updatedTimeoffRequest.getId());
+        checkIfAuthorizedRequest(timeoffRequest.getRequester().getId(), false);
+        checkTimeoffRequestStatus(timeoffRequest);
         if (updatedTimeoffRequest.getRequestStatus() == null || updatedTimeoffRequest.getRequestStatus() != PENDING) {
             timeoffRequest.setRequestStatus(PENDING);
         }
@@ -116,7 +106,45 @@ public class TimeoffRequestService {
         return timeoffRequest;
     }
 
+    @Transactional
     public void deleteTimeoffRequest(Long id) {
-        timeoffRequestRepository.deleteById(id);
+        TimeoffRequest timeoffRequest = checkTimeoffRequestExisting(id);
+        checkIfAuthorizedRequest(timeoffRequest.getRequester().getId(), false);
+        timeoffRequestRepository.delete(timeoffRequest);
+    }
+
+    private void checkIfAuthorizedRequest(Long id, boolean isEvaluation) {
+        CustomUserDetails userDetails = (CustomUserDetails) SecurityContextHolder
+            .getContext()
+            .getAuthentication()
+            .getPrincipal();
+        String errorMessage = isEvaluation ?
+            "This request's evaluation belongs to another manager" :
+            "This request belongs to another user";
+        if (!id.equals(userDetails.getId())) {
+            throw new AuthorizationDeniedException(errorMessage);
+        }
+    }
+
+    private TimeoffRequest checkTimeoffRequestExisting(Long id) {
+        Optional<TimeoffRequest> optTimeoffRequest = timeoffRequestRepository.findById(id);
+        if (optTimeoffRequest.isEmpty()) {
+            throw new NoSuchElementException("Timeoff request not found");
+        }
+        return optTimeoffRequest.get();
+    }
+
+    private Employee checkEmployeeExisting(Long id) {
+        Optional<Employee> optEmployee = employeeRepository.findById(id);
+        if (optEmployee.isEmpty()) {
+            throw new NoSuchElementException("Employee not found");
+        }
+        return optEmployee.get();
+    }
+
+    private void checkTimeoffRequestStatus(TimeoffRequest timeoffRequest) {
+        if (timeoffRequest.getRequestStatus() != PENDING) {
+            throw new UnsupportedOperationException("This request was already evaluated");
+        }
     }
 }

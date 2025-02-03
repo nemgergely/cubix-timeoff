@@ -48,4 +48,15 @@ public class TimeoffRequest {
         this.startDate = startDate;
         this.endDate = endDate;
     }
+
+    public TimeoffRequest(LocalDate startDate, LocalDate endDate, LocalDateTime requestDateTime,
+                          RequestStatus requestStatus, Employee requester, Employee approver)
+    {
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.requestDateTime = requestDateTime;
+        this.requestStatus = requestStatus;
+        this.requester = requester;
+        this.approver = approver;
+    }
 }

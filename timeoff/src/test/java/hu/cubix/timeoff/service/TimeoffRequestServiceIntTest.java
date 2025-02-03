@@ -17,7 +17,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.test.context.support.WithUserDetails;
 import org.springframework.util.StringUtils;
+import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -38,6 +40,7 @@ class TimeoffRequestServiceIntTest {
     private TimeoffRequestRepository timeoffRequestRepository;
 
     @Order(1)
+    @WithUserDetails(value = "employeeE1", userDetailsServiceBeanName = "employeeUserDetailsService")
     @ParameterizedTest
     @CsvSource(value = {
         "All with approver Manager One, null, Manager O, null, null, null, null",
@@ -78,7 +81,7 @@ class TimeoffRequestServiceIntTest {
         List<TimeoffRequest> timeoffRequests = pagedAndFilteredTimeoffRequests.getContent();
         switch (caseName) {
             case "All with approver Manager One":
-                assertEquals(3, timeoffRequests.size());
+                assertEquals(4, timeoffRequests.size());
                 assertTrue(timeoffRequests.stream().allMatch(timeoffRequest ->
                     timeoffRequest.getApprover().getId().equals(1L)));
                 assertTrue(timeoffRequests.stream()
@@ -93,7 +96,7 @@ class TimeoffRequestServiceIntTest {
                 assertTrue(timeoffRequests.stream()
                     .map(request -> request.getRequester().getId())
                     .toList()
-                    .containsAll(List.of(13L, 14L, 15L)));
+                    .containsAll(List.of(8L, 9L, 10L)));
                 break;
             case "All created between 2024-01-15 and 2025-01-15", "All created between 2025-01-15 and 2026-01-15":
                 assertEquals(3, timeoffRequests.size());
@@ -116,13 +119,15 @@ class TimeoffRequestServiceIntTest {
                 );
                 break;
             case "All rejected by Manager One":
-                assertEquals(1, timeoffRequests.size());
-                assertEquals(5L, timeoffRequests.get(0).getRequester().getId());
+                assertEquals(2, timeoffRequests.size());
+                assertEquals(3L, timeoffRequests.get(0).getRequester().getId());
+                assertEquals(5L, timeoffRequests.get(1).getRequester().getId());
                 assertEquals(REJECTED, timeoffRequests.get(0).getRequestStatus());
+                assertEquals(REJECTED, timeoffRequests.get(1).getRequestStatus());
                 break;
             case "All rejected by Manager Two":
                 assertEquals(1, timeoffRequests.size());
-                assertEquals(15L, timeoffRequests.get(0).getRequester().getId());
+                assertEquals(10L, timeoffRequests.get(0).getRequester().getId());
                 assertEquals(REJECTED, timeoffRequests.get(0).getRequestStatus());
                 break;
             default:
@@ -131,11 +136,11 @@ class TimeoffRequestServiceIntTest {
     }
 
     @Order(2)
+    @WithUserDetails(value = "employeeE1", userDetailsServiceBeanName = "employeeUserDetailsService")
     @ParameterizedTest
     @CsvSource(value = {
         "Requester not found, 30, 2025-08-22, 2025-08-25",
-        "Manager not found, 1, 2025-08-22, 2025-08-25",
-        "Valid, 13, 2025-08-22, 2025-08-25",
+        "Valid, 3, 2025-08-22, 2025-08-25",
     })
     void testCreateTimeoffRequest(String caseName, Long requesterId, String startDateString, String endDateString) {
         // ARRANGE
@@ -151,14 +156,7 @@ class TimeoffRequestServiceIntTest {
                     NoSuchElementException.class,
                     () -> timeoffRequestService.createTimeoffRequest(requesterId, timeoffRequest)
                 );
-                assertTrue(thrown.getMessage().contains("Requester employee not found"));
-                break;
-            case "Manager not found":
-                thrown = assertThrows(
-                    NoSuchElementException.class,
-                    () -> timeoffRequestService.createTimeoffRequest(requesterId, timeoffRequest)
-                );
-                assertTrue(thrown.getMessage().contains("There is no manager found who can approve this request"));
+                assertTrue(thrown.getMessage().contains("Employee not found"));
                 break;
             case "Valid":
                 TimeoffRequest newTimeoffRequest = timeoffRequestService.createTimeoffRequest(requesterId, timeoffRequest);
@@ -173,6 +171,26 @@ class TimeoffRequestServiceIntTest {
     }
 
     @Order(3)
+    @WithUserDetails(value = "managerM1", userDetailsServiceBeanName = "employeeUserDetailsService")
+    @Test
+    void testCreateTimeoffRequestManagerNotFound() {
+        // ARRANGE
+        Long requesterId = 1L;
+        LocalDate startDate = LocalDate.of(2022, 8, 22);
+        LocalDate endDate = LocalDate.of(2022, 8, 25);
+        TimeoffRequest timeoffRequest = new TimeoffRequest(null, startDate, endDate);
+        NoSuchElementException thrown;
+
+        // ACT - ASSERT
+        thrown = assertThrows(
+            NoSuchElementException.class,
+            () -> timeoffRequestService.createTimeoffRequest(requesterId, timeoffRequest)
+        );
+        assertTrue(thrown.getMessage().contains("There is no manager found who can approve this request"));
+    }
+
+    @Order(4)
+    @WithUserDetails(value = "employeeE1", userDetailsServiceBeanName = "employeeUserDetailsService")
     @ParameterizedTest
     @CsvSource(value = {
         "Time off request not found, 10, 2025-10-22, 2025-10-25",
@@ -214,7 +232,8 @@ class TimeoffRequestServiceIntTest {
         }
     }
 
-    @Order(4)
+    @Order(5)
+    @WithUserDetails(value = "managerM1", userDetailsServiceBeanName = "employeeUserDetailsService")
     @ParameterizedTest
     @CsvSource(value = {
         "Time off request not found, 10, REJECTED",
@@ -260,7 +279,8 @@ class TimeoffRequestServiceIntTest {
         }
     }
 
-    @Order(5)
+    @Order(6)
+    @WithUserDetails(value = "employeeE7", userDetailsServiceBeanName = "employeeUserDetailsService")
     @Test
     void testDeleteTimeoffRequest() {
         // ACT
