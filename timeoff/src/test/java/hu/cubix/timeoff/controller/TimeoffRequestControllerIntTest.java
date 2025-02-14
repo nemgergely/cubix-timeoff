@@ -22,6 +22,7 @@ import static hu.cubix.timeoff.enums.RequestStatus.REJECTED;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestDatabase
@@ -33,10 +34,12 @@ class TimeoffRequestControllerIntTest {
     WebTestClient webTestClient;
 
     public static final String API_TIMEOFF = "/api/timeoff";
-
     @BeforeEach
     void setUp() {
-        webTestClient = MockMvcWebTestClient.bindToApplicationContext(webApplicationContext).build();
+        webTestClient = MockMvcWebTestClient
+            .bindToApplicationContext(webApplicationContext)
+            .apply(springSecurity())
+            .build();
     }
 
     @WithUserDetails(value = "employeeE1", userDetailsServiceBeanName = "employeeUserDetailsService")
