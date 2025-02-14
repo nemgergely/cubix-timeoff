@@ -21,7 +21,6 @@ public class EmployeeUserDetailsService implements UserDetailsService {
         if (employee == null) {
             throw new UsernameNotFoundException(username);
         }
-        UserDetails userDetails = CustomUserDetails.build(employee);
-        return userDetails;
+        return CustomUserDetails.build(employee);
     }
 }
